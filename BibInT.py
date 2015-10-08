@@ -1,7 +1,25 @@
-import sys,re,os
-from PyQt4.QtGui import *; from PyQt4.QtWebKit import QWebView,QWebPage; from PyQt4.QtCore import *
+import sys,re,os,bibtexparser
+from pybtex.database.input.bibtex import Parser; from pybtex.database.output.bibtex import Writer
+from PyQt4.QtGui import *; from PyQt4.QtCore import *
 # user
-folder = 'E:/Reference'
+folder = 'E:\\Reference\\'
+
+# open bibtex files
+bfiles = []
+allentries = []
+for bibfile in os.listdir(folder):
+	bfiles.append(os.path.splitext(bibfile)[0])
+	with open(folder + bibfile, 'r', encoding='utf-8') as bibopen:
+		bibread = bibopen.read()
+		bibdata = bibtexparser.loads(bibread).entries
+		for entry in bibdata:
+			entry['File'] = os.path.splitext(bibfile)[0]
+			allentries.append(entry)
+def add2List(entry):
+	lItem = QListWidgetItem(entry['ID'])
+	lItem.setFont(QFont('serif', 16))
+	listWidget.addItem(lItem)
+
 # from Note-
 def alldo(func, list):
 	for v in list:
@@ -13,7 +31,7 @@ class Widget(QWidget):
 		p = self.palette()
 		p.setColor(self.backgroundRole(), QColor.fromRgb(0, 30, 60))
 		self.setPalette(p)
-		self.setGeometry(0, 70, screen.width(), screen.height()-100)
+		self.setGeometry(1, 60, screen.width(), screen.height()-85)
 		self.setWindowTitle('Note-')
 		self.setWindowIcon(QIcon('BibTeX.png'))
 		self.sysTrayIcon = QSystemTrayIcon(self)
@@ -28,14 +46,14 @@ class Widget(QWidget):
 			self.show(); self.setWindowState(Qt.WindowActive)
 
 # user inputs
-global CommandStr, AuthorStr, TitleStr, JournalStr, YearStr, PublisherStr, BooktitleStr, EditorStr, ChapterStr, PagesStr, InstitutionStr, SchoolStr, AddressStr, CrossrefStr, EditionStr, HowpublishedStr, KeywordsStr, MonthStr, NumberStr, OrganizationStr, SeriesStr, TypeStr, VolumeStr, NoteStr, CommandEdit, AuthorEdit, TitleEdit, JournalEdit, YearEdit, PublisherEdit, BooktitleEdit, EditorEdit, ChapterEdit, PagesEdit, InstitutionEdit, SchoolEdit, AddressEdit, CrossrefEdit, EditionEdit, HowpublishedEdit, KeywordsEdit, MonthEdit, NumberEdit, OrganizationEdit, SeriesEdit, TypeEdit, VolumeEdit, NoteEdit
+global CommandStr, AuthorStr, TitleStr, JournalStr, YearStr, PublisherStr, BooktitleStr, EditorStr, ChapterStr, PagesStr, InstitutionStr, SchoolStr, AddressStr, CrossrefStr, EditionStr, HowpublishedStr, KeywordsStr, MonthStr, NumberStr, OrganizationStr, SeriesStr, TypeStr, VolumeStr, NoteStr, FileStr, CommandEdit, AuthorEdit, TitleEdit, JournalEdit, YearEdit, PublisherEdit, BooktitleEdit, EditorEdit, ChapterEdit, PagesEdit, InstitutionEdit, SchoolEdit, AddressEdit, CrossrefEdit, EditionEdit, HowpublishedEdit, KeywordsEdit, MonthEdit, NumberEdit, OrganizationEdit, SeriesEdit, TypeEdit, VolumeEdit, NoteEdit, FileEdit
 def inputs(field):
 	exec(field + "Edit = QLineEdit()", globals())
 	exec(field + "Edit.setPalette(pal)", globals())
 	exec(field + "Edit.setFont(font)", globals())
 	def paste():
-		exec(field + "Edit.paste()", globals())
-		exec(field + "Str = " + field + "Edit.text()", globals())
+		exec(field + "Edit.paste()", globals()) # function: paste from clipboard
+		exec(field + "Str = " + field + "Edit.text()", globals()) # get text from lineedit
 	entButton = QPushButton(field)
 	entButton.setFixedWidth(200)
 	entButton.setFont(font)
@@ -67,8 +85,6 @@ def Edit2():
 	pass
 def Clear2():
 	pass
-def init():
-	pass
 
 app = QApplication(sys.argv)
 screen = QDesktopWidget().screenGeometry()
@@ -84,9 +100,9 @@ widget = Widget()
 fullLayout, midLayout, rLayout, buttonLayout = QHBoxLayout(), QVBoxLayout(), QVBoxLayout(), QHBoxLayout()
 
 listWidget = QListWidget()
-listWidget.setFixedWidth(150)
+listWidget.setFixedWidth(200)
 listWidget.setPalette(pal)
-init()
+alldo(add2List, allentries)
 
 textEdit = QTextEdit()
 textEdit.setPalette(pal)
@@ -99,7 +115,7 @@ typeBox = QComboBox()
 typeBox.setFont(font)
 alldo(types, ['Book', 'Article', 'Booklet', 'Conference', 'Inbook', 'Incollection', 'Inproceedings', 'Manual', 'Mastersthesis', 'Misc', 'Phdthesis', 'Proceedings', 'Techreport', 'Unpublished'])
 rLayout.addWidget(typeBox)
-alldo(inputs, ['Command', 'Author', 'Title', 'Journal', 'Year', 'Publisher', 'Booktitle', 'Editor', 'Chapter', 'Pages', 'Institution', 'School', 'Address', 'Crossref', 'Edition', 'Howpublished', 'Keywords', 'Month', 'Number', 'Organization', 'Series', 'Type', 'Volume', 'Note'])
+alldo(inputs, ['Command', 'Author', 'Title', 'Journal', 'Year', 'Publisher', 'Booktitle', 'Editor', 'Chapter', 'Pages', 'Institution', 'School', 'Address', 'Crossref', 'Edition', 'Howpublished', 'Keywords', 'Month', 'Number', 'Organization', 'Series', 'Type', 'Volume', 'Note', 'File'])
 alldo(funcButt, [('Add', Add, buttonLayout), ('Edit', Edit, buttonLayout), ('Clear', Clear, buttonLayout)])
 rLayout.addLayout(buttonLayout)
 
