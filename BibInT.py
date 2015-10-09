@@ -3,22 +3,77 @@ from pybtex.database.input.bibtex import Parser; from pybtex.database.output.bib
 from PyQt4.QtGui import *; from PyQt4.QtCore import *
 # user
 folder = 'E:\\Reference\\'
+defalt = 'defalt' # new bibtex entries will be stored here
+# bibtex format
+reftypes = ['book', 'article', 'booklet', 'conference', 'inbook', 'incollection', 'inproceedings', 'manual', 'mastersthesis', 'misc', 'phdthesis', 'proceedings', 'techreport', 'unpublished']
+fields = ['ID', 'author', 'title', 'journal', 'year', 'publisher', 'booktitle', 'editor', 'chapter', 'pages', 'institution', 'school', 'address', 'crossref', 'edition', 'howpublished', 'keywords', 'month', 'number', 'organization', 'series', 'type', 'volume', 'note', 'file']
+global IDEdit, authoredit, titleedit, journaledit, yearedit, publisheredit, booktitleedit, editoredit, chapteredit, pagesedit, institutionedit, schooledit, addressedit, crossrefedit, editionedit, howpublishededit, keywordsedit, monthedit, numberedit, organizationedit, seriesedit, typeedit, volumeedit, noteedit, fileEdit
 
-# open bibtex files
-bfiles = []
-allentries = []
-for bibfile in os.listdir(folder):
-	bfiles.append(os.path.splitext(bibfile)[0])
-	with open(folder + bibfile, 'r', encoding='utf-8') as bibopen:
-		bibread = bibopen.read()
-		bibdata = bibtexparser.loads(bibread).entries
-		for entry in bibdata:
-			entry['File'] = os.path.splitext(bibfile)[0]
-			allentries.append(entry)
+# open bibtex files and load to list
+def init():
+	listWidget.clear()
+	alldo(add2List, allref)
+def readbib(content, bibfilename): # read bibtex content and save into allref
+	bibdata = bibtexparser.loads(content).entries
+	for entry in bibdata:
+		entry['file'] = bibfilename
+		allref.append(entry)
 def add2List(entry):
-	lItem = QListWidgetItem(entry['ID'])
+	lItem = QListWidgetItem(entry['ID'] + '`' + entry['file'])
 	lItem.setFont(QFont('serif', 16))
 	listWidget.addItem(lItem)
+# list to ref
+def tobib(entryinlist):
+	db = bibtexparser.bibdatabase.BibDatabase()
+	db.entries = []
+	db.entries.append(entryinlist)
+	writer = bibtexparser.bwriter.BibTexWriter()
+	return writer.write(db)
+def clearfields():
+	for field in fields:
+		exec(field + "Edit.clear()", globals())
+def View():
+	crRef = listWidget.currentItem().text()
+	for ref in allref:
+		refSplit = crRef.split('`')
+		if refSplit[0] == ref['ID'] and refSplit[1] == ref['file'] :
+			clearfields()
+			for key in ref.keys():
+				if key == 'ENTRYTYPE':
+					typeBox.setCurrentIndex(reftypes.index(ref['ENTRYTYPE']))
+				else:
+					exec(key + "Edit.setText('" + ref[key] + "')")
+			textEdit.setText(tobib(ref)) # view in textedit
+# list and entries to files
+def writetofiles():
+	init()
+	for bac in os.listdir(folder):
+		if os.path.splitext(bac)[-1][1:] == 'bac':
+			os.remove(folder + bac)
+	for ref in allref:
+		if os.path.exists(folder + ref['file'] + '.bib'):
+			os.rename(folder + ref['file'] + '.bib', folder + ref['file'] + '.bac')
+	for ref in allref:
+		with open(folder + ref['file'] + '.bib', 'a', encoding = 'utf-8') as reffile:
+			reffile.write(tobib(ref))
+def edits2dict():
+	got = {}
+	got['ENTRYTYPE'] = typeBox.currentText()
+	for field in fields:
+		exec("text = " + field + "Edit.text()", globals())
+		if text:
+			exec("got['" + field + "'] = text")
+		elif field == 'file':
+			got['file'] = defalt
+	return got
+def Add():
+	allref.append(edits2dict())
+	writetofiles()
+def Add2():
+	bibdata = bibtexparser.loads(textEdit.document().toPlainText()).entries
+	for entry in bibdata:
+		allref.append(entry)
+	writetofiles()
 
 # from Note-
 def alldo(func, list):
@@ -44,16 +99,24 @@ class Widget(QWidget):
 	def activate(self, reason):
 		if reason == 1 or reason == 2:
 			self.show(); self.setWindowState(Qt.WindowActive)
+# function buttons
+def funcButt(var):
+	button = QPushButton(var[0])
+	button.clicked.connect(var[1])
+	button.setFont(font)
+	var[2].addWidget(button)
 
+# type
+def types(rtype):
+	exec("typeBox.addItem('" + rtype + "')")
 # user inputs
-global CommandStr, AuthorStr, TitleStr, JournalStr, YearStr, PublisherStr, BooktitleStr, EditorStr, ChapterStr, PagesStr, InstitutionStr, SchoolStr, AddressStr, CrossrefStr, EditionStr, HowpublishedStr, KeywordsStr, MonthStr, NumberStr, OrganizationStr, SeriesStr, TypeStr, VolumeStr, NoteStr, FileStr, CommandEdit, AuthorEdit, TitleEdit, JournalEdit, YearEdit, PublisherEdit, BooktitleEdit, EditorEdit, ChapterEdit, PagesEdit, InstitutionEdit, SchoolEdit, AddressEdit, CrossrefEdit, EditionEdit, HowpublishedEdit, KeywordsEdit, MonthEdit, NumberEdit, OrganizationEdit, SeriesEdit, TypeEdit, VolumeEdit, NoteEdit, FileEdit
 def inputs(field):
 	exec(field + "Edit = QLineEdit()", globals())
 	exec(field + "Edit.setPalette(pal)", globals())
 	exec(field + "Edit.setFont(font)", globals())
 	def paste():
+		exec(field + "Edit.clear()", globals())
 		exec(field + "Edit.paste()", globals()) # function: paste from clipboard
-		exec(field + "Str = " + field + "Edit.text()", globals()) # get text from lineedit
 	entButton = QPushButton(field)
 	entButton.setFixedWidth(200)
 	entButton.setFont(font)
@@ -63,29 +126,16 @@ def inputs(field):
 	Layout.addWidget(entButton)
 	rLayout.addLayout(Layout)
 
-# type
-def types(rtype):
-	exec("typeBox.addItem('" + rtype + "')")
-
-# function buttons
-def funcButt(var):
-	button = QPushButton(var[0])
-	button.clicked.connect(var[1])
-	button.setFont(font)
-	var[2].addWidget(button)
-def Add():
-	pass
 def Edit():
-	pass
-def Clear():
-	pass
-def Add2():
 	pass
 def Edit2():
 	pass
-def Clear2():
-	pass
 
+allref = []
+for bibfile in os.listdir(folder):
+	if os.path.splitext(bibfile)[-1][1:] == 'bib':
+		with open(folder + bibfile, 'r', encoding='utf-8') as bibopen:
+			readbib(bibopen.read(), os.path.splitext(bibfile)[0])
 app = QApplication(sys.argv)
 screen = QDesktopWidget().screenGeometry()
 pal = QPalette()
@@ -102,27 +152,27 @@ fullLayout, midLayout, rLayout, buttonLayout = QHBoxLayout(), QVBoxLayout(), QVB
 listWidget = QListWidget()
 listWidget.setFixedWidth(200)
 listWidget.setPalette(pal)
-alldo(add2List, allentries)
+alldo(add2List, allref)
+widget.connect(listWidget, SIGNAL('itemClicked(QListWidgetItem *)'), View)
 
 textEdit = QTextEdit()
 textEdit.setPalette(pal)
 textEdit.setFont(font)
 textEdit.setFixedWidth(screen.width() / 4)
 midLayout.addWidget(textEdit)
-alldo(funcButt, [('Add', Add2, midLayout), ('Edit', Edit2, midLayout), ('Clear', Clear2, midLayout)])
+alldo(funcButt, [('Add', Add2, midLayout), ('Edit', Edit2, midLayout), ('Clear', lambda: textEdit.setText(''), midLayout)])
 
 typeBox = QComboBox()
 typeBox.setFont(font)
-alldo(types, ['Book', 'Article', 'Booklet', 'Conference', 'Inbook', 'Incollection', 'Inproceedings', 'Manual', 'Mastersthesis', 'Misc', 'Phdthesis', 'Proceedings', 'Techreport', 'Unpublished'])
+alldo(types, reftypes)
 rLayout.addWidget(typeBox)
-alldo(inputs, ['Command', 'Author', 'Title', 'Journal', 'Year', 'Publisher', 'Booktitle', 'Editor', 'Chapter', 'Pages', 'Institution', 'School', 'Address', 'Crossref', 'Edition', 'Howpublished', 'Keywords', 'Month', 'Number', 'Organization', 'Series', 'Type', 'Volume', 'Note', 'File'])
-alldo(funcButt, [('Add', Add, buttonLayout), ('Edit', Edit, buttonLayout), ('Clear', Clear, buttonLayout)])
+alldo(inputs, fields)
+alldo(funcButt, [('Add', Add, buttonLayout), ('Edit', Edit, buttonLayout), ('Clear', clearfields, buttonLayout)])
 rLayout.addLayout(buttonLayout)
 
 fullLayout.addWidget(listWidget)
 fullLayout.addLayout(midLayout)
 fullLayout.addLayout(rLayout)
 widget.setLayout(fullLayout)
-
 widget.show()
 app.exec_()

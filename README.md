@@ -1,6 +1,7 @@
-# BibInT
+# 寸箋
 BibTeX 添加管理工具。
 
-ChangeLog:
+## ChangeLog:
 2015/10/07: 用 PyQt 畫框架，未放置功能。  
 2015/10/08: 引入 bibtexparser ，渲染 BibTeX 文件並顯示在列表。  
+2015/10/10: 寫出「添加文獻」功能，添加時會刷新列表、備份現有 .bib 文件。  
